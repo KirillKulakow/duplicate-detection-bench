@@ -1,51 +1,35 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const { Worker } = require('worker_threads');
-const multer = require('multer');
+import { Worker } from 'worker_threads';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Middleware
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+export default function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-// Serve static files from React build
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/build')));
-}
-
-// Worker status tracking
-const workerStatus = {
-  minhash: { available: true, lastCheck: Date.now() },
-  levenshtein: { available: true, lastCheck: Date.now() }
-};
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    workers: workerStatus,
-    uptime: process.uptime()
-  });
-});
-
-// Process duplicates endpoint with streaming
-app.post('/api/process-duplicates', (req, res) => {
   const { data, algorithm = 'both' } = req.body;
   
   if (!data || !Array.isArray(data)) {
     return res.status(400).json({ error: 'Invalid data format' });
   }
 
+  // Limit data size for Vercel serverless
+  if (data.length > 1000) {
+    return res.status(400).json({ 
+      error: 'Dataset too large for serverless environment. Please limit to 1000 records or less.' 
+    });
+  }
+
   // Set up streaming response
   res.writeHead(200, {
-    'Content-Type': 'text/plain',
+    'Content-Type': 'text/plain; charset=utf-8',
     'Transfer-Encoding': 'chunked',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive'
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*'
   });
 
   const sendProgress = (progress) => {
@@ -54,6 +38,10 @@ app.post('/api/process-duplicates', (req, res) => {
 
   const processWithWorker = (workerPath, algorithm) => {
     return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Worker timeout'));
+      }, 23000); // 23s timeout for Vercel
+
       const worker = new Worker(workerPath, {
         workerData: { data, algorithm }
       });
@@ -66,17 +54,19 @@ app.post('/api/process-duplicates', (req, res) => {
             status: message.status
           });
         } else if (message.type === 'result') {
+          clearTimeout(timeout);
           resolve(message.result);
         }
       });
 
       worker.on('error', (error) => {
+        clearTimeout(timeout);
         console.error(`Worker error (${algorithm}):`, error);
-        workerStatus[algorithm].available = false;
         reject(error);
       });
 
       worker.on('exit', (code) => {
+        clearTimeout(timeout);
         if (code !== 0) {
           reject(new Error(`Worker stopped with exit code ${code}`));
         }
@@ -94,8 +84,6 @@ app.post('/api/process-duplicates', (req, res) => {
           path.join(__dirname, 'workers/minhash-worker.js'),
           'minhash'
         );
-        workerStatus.minhash.available = true;
-        workerStatus.minhash.lastCheck = Date.now();
       }
 
       if (algorithm === 'both' || algorithm === 'levenshtein') {
@@ -104,8 +92,6 @@ app.post('/api/process-duplicates', (req, res) => {
           path.join(__dirname, 'workers/levenshtein-worker.js'),
           'levenshtein'
         );
-        workerStatus.levenshtein.available = true;
-        workerStatus.levenshtein.lastCheck = Date.now();
       }
 
       // Send final results
@@ -127,26 +113,4 @@ app.post('/api/process-duplicates', (req, res) => {
   };
 
   runProcessing();
-});
-
-// Serve React app for all other routes in production
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/build/index.html'));
-  });
-}
-
-// Error handling middleware
-app.use((error, req, res, next) => {
-  console.error('Server error:', error);
-  res.status(500).json({ error: 'Internal server error' });
-});
-
-module.exports = app;
-
-if (require.main === module) {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-  });
 }

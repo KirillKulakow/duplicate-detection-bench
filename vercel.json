@@ -1,31 +1,27 @@
 {
   "version": 2,
-  "builds": [
+  "name": "duplicate-detection-system",
+  "rewrites": [
     {
-      "src": "client/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     },
     {
-      "src": "server/index.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/server/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/client/build/$1"
+      "source": "/(.*)",
+      "destination": "/$1"
     }
   ],
   "functions": {
-    "server/index.js": {
-      "maxDuration": 30
+    "api/health.js": {
+      "maxDuration": 25,
+      "memory": 1024
+    },
+    "api/process-duplicates.js": {
+      "maxDuration": 25,
+      "memory": 1024
     }
+  },
+  "env": {
+    "NODE_ENV": "production"
   }
 }
