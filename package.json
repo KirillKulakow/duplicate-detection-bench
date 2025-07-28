@@ -1,27 +1,23 @@
 {
   "name": "duplicate-detection-system",
   "version": "1.0.0",
-  "description": "Server-side duplicate detection system with MinHash and Levenshtein algorithms",
   "type": "module",
   "scripts": {
+    "build": "cd client && npm install && npm run build",
     "dev": "vercel dev",
-    "build": "cd client && npm run build",
     "start": "vercel dev",
-    "install-client": "cd client && npm install"
+    "install-deps": "npm install && cd client && npm install",
+    "vercel-build": "cd client && npm install && npm run build",
+    "clean": "rm -rf client/build && rm -rf node_modules && rm -rf client/node_modules"
   },
   "dependencies": {
     "papaparse": "^5.4.1"
   },
-  "engines": {
-    "node": ">=18.x"
+  "devDependencies": {
+    "vercel": "^28.0.0"
   },
-  "keywords": [
-    "duplicate-detection",
-    "minhash",
-    "levenshtein",
-    "vercel",
-    "serverless"
-  ],
-  "author": "Kyrylo Kulakov",
-  "license": "MIT"
+  "engines": {
+    "node": ">=18.x",
+    "npm": ">=8.x"
+  }
 }

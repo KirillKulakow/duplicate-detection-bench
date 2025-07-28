@@ -1,6 +1,10 @@
 {
   "version": 2,
   "name": "duplicate-detection-system",
+  "buildCommand": "cd client && npm install && npm run build",
+  "outputDirectory": "client/build",
+  "installCommand": "npm install",
+  "devCommand": "vercel dev",
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -23,5 +27,29 @@
   },
   "env": {
     "NODE_ENV": "production"
-  }
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type"
+        }
+      ]
+    }
+  ]
 }
