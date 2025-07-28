@@ -1,7 +1,7 @@
 const { parentPort, workerData } = require('worker_threads');
 
 class MinHashProcessor {
-  constructor(numHashFunctions = 128) {
+  constructor(numHashFunctions = 64) { // Reduced for serverless
     this.numHashFunctions = numHashFunctions;
     this.hashFunctions = this.generateHashFunctions();
   }
@@ -16,7 +16,6 @@ class MinHashProcessor {
     return functions;
   }
 
-  // Convert text to shingles (n-grams)
   textToShingles(text, shingleSize = 3) {
     const cleanText = text.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ');
     const shingles = new Set();
@@ -28,18 +27,16 @@ class MinHashProcessor {
     return shingles;
   }
 
-  // Simple hash function
   hash(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      hash = hash & hash;
     }
     return Math.abs(hash);
   }
 
-  // Generate MinHash signature for a set of shingles
   generateMinHashSignature(shingles) {
     const signature = new Array(this.numHashFunctions).fill(Infinity);
     
@@ -56,7 +53,6 @@ class MinHashProcessor {
     return signature;
   }
 
-  // Calculate Jaccard similarity from MinHash signatures
   calculateJaccardSimilarity(sig1, sig2) {
     let matches = 0;
     for (let i = 0; i < sig1.length; i++) {
@@ -67,14 +63,12 @@ class MinHashProcessor {
     return matches / sig1.length;
   }
 
-  // Process all data and find duplicates
   processData(data, threshold = 0.7) {
     const signatures = [];
     const duplicates = [];
     const totalComparisons = (data.length * (data.length - 1)) / 2;
     let completedComparisons = 0;
 
-    // Generate signatures
     parentPort.postMessage({
       type: 'progress',
       progress: 10,
@@ -87,8 +81,8 @@ class MinHashProcessor {
       const signature = this.generateMinHashSignature(shingles);
       signatures.push({ index: i, signature, original: data[i] });
       
-      if (i % 100 === 0) {
-        const progress = 10 + (i / data.length) * 30;
+      if (i % 50 === 0) {
+        const progress = 10 + (i / data.length) * 40;
         parentPort.postMessage({
           type: 'progress',
           progress: Math.round(progress),
@@ -99,11 +93,10 @@ class MinHashProcessor {
 
     parentPort.postMessage({
       type: 'progress',
-      progress: 40,
-      status: 'Comparing signatures for duplicates...'
+      progress: 50,
+      status: 'Comparing signatures...'
     });
 
-    // Compare signatures
     for (let i = 0; i < signatures.length - 1; i++) {
       for (let j = i + 1; j < signatures.length; j++) {
         const similarity = this.calculateJaccardSimilarity(
@@ -121,8 +114,8 @@ class MinHashProcessor {
         }
 
         completedComparisons++;
-        if (completedComparisons % 1000 === 0) {
-          const progress = 40 + (completedComparisons / totalComparisons) * 50;
+        if (completedComparisons % 500 === 0) {
+          const progress = 50 + (completedComparisons / totalComparisons) * 40;
           parentPort.postMessage({
             type: 'progress',
             progress: Math.round(progress),
@@ -137,13 +130,12 @@ class MinHashProcessor {
       threshold,
       totalItems: data.length,
       duplicatesFound: duplicates.length,
-      duplicates: duplicates.slice(0, 100), // Limit results for performance
+      duplicates: duplicates.slice(0, 50),
       executionTime: process.hrtime.bigint()
     };
   }
 }
 
-// Main worker execution
 try {
   const { data } = workerData;
   const processor = new MinHashProcessor();
@@ -158,7 +150,7 @@ try {
   const result = processor.processData(data);
   const endTime = process.hrtime.bigint();
   
-  result.executionTime = Number(endTime - startTime) / 1000000; // Convert to milliseconds
+  result.executionTime = Number(endTime - startTime) / 1000000;
 
   parentPort.postMessage({
     type: 'progress',

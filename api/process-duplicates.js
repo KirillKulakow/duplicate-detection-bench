@@ -1,11 +1,8 @@
-import { Worker } from 'worker_threads';
-import path from 'path';
-import { fileURLToPath } from 'url';
+// CommonJS format for Vercel serverless function
+const { Worker } = require('worker_threads');
+const path = require('path');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-export default function handler(req, res) {
+module.exports = function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -113,4 +110,4 @@ export default function handler(req, res) {
   };
 
   runProcessing();
-}
+};

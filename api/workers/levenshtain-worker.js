@@ -5,7 +5,6 @@ class LevenshteinProcessor {
     this.memo = new Map();
   }
 
-  // Calculate Levenshtein distance between two strings
   levenshteinDistance(str1, str2) {
     const key = `${str1}|${str2}`;
     if (this.memo.has(key)) {
@@ -17,20 +16,18 @@ class LevenshteinProcessor {
 
     const matrix = Array(str2.length + 1).fill().map(() => Array(str1.length + 1).fill(0));
 
-    // Initialize first row and column
     for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
     for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
 
-    // Fill the matrix
     for (let j = 1; j <= str2.length; j++) {
       for (let i = 1; i <= str1.length; i++) {
         if (str1[i - 1] === str2[j - 1]) {
           matrix[j][i] = matrix[j - 1][i - 1];
         } else {
           matrix[j][i] = Math.min(
-            matrix[j - 1][i] + 1,     // deletion
-            matrix[j][i - 1] + 1,     // insertion
-            matrix[j - 1][i - 1] + 1  // substitution
+            matrix[j - 1][i] + 1,
+            matrix[j][i - 1] + 1,
+            matrix[j - 1][i - 1] + 1
           );
         }
       }
@@ -41,7 +38,6 @@ class LevenshteinProcessor {
     return distance;
   }
 
-  // Calculate similarity percentage based on Levenshtein distance
   calculateSimilarity(str1, str2) {
     const maxLength = Math.max(str1.length, str2.length);
     if (maxLength === 0) return 1.0;
@@ -50,7 +46,6 @@ class LevenshteinProcessor {
     return 1 - (distance / maxLength);
   }
 
-  // Normalize text for comparison
   normalizeText(text) {
     return text.toLowerCase()
       .replace(/[^\w\s]/g, '')
@@ -58,7 +53,6 @@ class LevenshteinProcessor {
       .trim();
   }
 
-  // Process data and find duplicates
   processData(data, threshold = 0.8) {
     const duplicates = [];
     const totalComparisons = (data.length * (data.length - 1)) / 2;
@@ -70,7 +64,6 @@ class LevenshteinProcessor {
       status: 'Preparing data for Levenshtein comparison...'
     });
 
-    // Prepare normalized text representations
     const normalizedData = data.map((item, index) => ({
       index,
       original: item,
@@ -83,7 +76,6 @@ class LevenshteinProcessor {
       status: 'Starting pairwise comparisons...'
     });
 
-    // Compare each pair
     for (let i = 0; i < normalizedData.length - 1; i++) {
       for (let j = i + 1; j < normalizedData.length; j++) {
         const similarity = this.calculateSimilarity(
@@ -106,9 +98,8 @@ class LevenshteinProcessor {
 
         completedComparisons++;
         
-        // Update progress every 500 comparisons
-        if (completedComparisons % 500 === 0) {
-          const progress = 10 + (completedComparisons / totalComparisons) * 85;
+        if (completedComparisons % 250 === 0) {
+          const progress = 10 + (completedComparisons / totalComparisons) * 80;
           parentPort.postMessage({
             type: 'progress',
             progress: Math.round(progress),
@@ -116,19 +107,8 @@ class LevenshteinProcessor {
           });
         }
       }
-
-      // Update progress every 50 items processed
-      if (i % 50 === 0) {
-        const itemProgress = (i / (normalizedData.length - 1)) * 85;
-        parentPort.postMessage({
-          type: 'progress',
-          progress: Math.round(10 + itemProgress),
-          status: `Comparing item ${i}/${normalizedData.length - 1}...`
-        });
-      }
     }
 
-    // Sort duplicates by similarity (highest first)
     duplicates.sort((a, b) => b.similarity - a.similarity);
 
     return {
@@ -136,14 +116,13 @@ class LevenshteinProcessor {
       threshold,
       totalItems: data.length,
       duplicatesFound: duplicates.length,
-      duplicates: duplicates.slice(0, 100), // Limit results for performance
+      duplicates: duplicates.slice(0, 50),
       totalComparisons: completedComparisons,
       cacheSize: this.memo.size
     };
   }
 }
 
-// Main worker execution
 try {
   const { data } = workerData;
   const processor = new LevenshteinProcessor();
@@ -158,7 +137,7 @@ try {
   const result = processor.processData(data);
   const endTime = process.hrtime.bigint();
   
-  result.executionTime = Number(endTime - startTime) / 1000000; // Convert to milliseconds
+  result.executionTime = Number(endTime - startTime) / 1000000;
 
   parentPort.postMessage({
     type: 'progress',
