@@ -1,26 +1,31 @@
 import React from 'react';
-import { Loader } from 'lucide-react';
 
-const ProgressBar = ({ algorithm, progress, status }) => {
+const ProgressBar = ({ algorithm, progress, status, icon, color }) => {
   return (
     <div className="progress-container">
       <div className="progress-header">
         <div className="algorithm-info">
-          <Loader className="progress-icon spinning" />
-          <span className="algorithm-name">{algorithm}</span>
+          <div className="progress-icon" style={{ color }}>
+            {icon}
+          </div>
+          <div className="algorithm-details">
+            <span className="algorithm-name">{algorithm}</span>
+            <span className="algorithm-status">{status}</span>
+          </div>
         </div>
-        <span className="progress-percentage">{progress}%</span>
+        <div className="progress-percentage" style={{ color }}>
+          {progress}%
+        </div>
       </div>
       
       <div className="progress-bar">
         <div 
           className="progress-fill" 
-          style={{ width: `${progress}%` }}
+          style={{ 
+            width: `${progress}%`,
+            backgroundColor: color
+          }}
         />
-      </div>
-      
-      <div className="progress-status">
-        {status}
       </div>
     </div>
   );
