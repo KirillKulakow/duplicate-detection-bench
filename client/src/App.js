@@ -3,7 +3,7 @@ import Papa from 'papaparse';
 import { 
   Upload, FileText, Play, CheckCircle, AlertCircle, Activity, 
   Clock, Database, Target, Zap, TrendingUp, BarChart3,
-  Users, Cpu, Memory, Timer, Award, Gauge
+  Users, Cpu, HardDrive, Timer, Award, Gauge
 } from 'lucide-react';
 import './App.css';
 
@@ -363,7 +363,7 @@ function App() {
                     { label: 'Execution Time', value: formatTime(results.levenshtein.executionTime), icon: <Clock /> },
                     { label: 'Total Items', value: results.levenshtein.totalItems.toLocaleString(), icon: <Database /> },
                     { label: 'Duplicates Found', value: results.levenshtein.duplicatesFound.toLocaleString(), icon: <Users /> },
-                    { label: 'Cache Size', value: results.levenshtein.cacheSize?.toLocaleString() || 'N/A', icon: <Memory /> }
+                    { label: 'Cache Size', value: results.levenshtein.cacheSize?.toLocaleString() || 'N/A', icon: <HardDrive /> }
                   ]}
                 />
               )}
