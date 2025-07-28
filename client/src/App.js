@@ -3,15 +3,10 @@ import Papa from 'papaparse';
 import { Upload, FileText, Play, CheckCircle, AlertCircle, Activity } from 'lucide-react';
 import './App.css';
 
-import WorkerStatus from './components/WorkerStatus';
-import ProgressBar from './components/ProgressBar';
-import ResultsDisplay from './components/ResultsDisplay';
-
 function App() {
   const [csvData, setCsvData] = useState(null);
   const [fileName, setFileName] = useState('');
   const [processing, setProcessing] = useState(false);
-  const [progress, setProgress] = useState({});
   const [results, setResults] = useState(null);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
@@ -45,14 +40,13 @@ function App() {
     });
   };
 
-  const processData = async (algorithm = 'both') => {
+  const processData = async () => {
     if (!csvData) {
       setError('Please upload a CSV file first');
       return;
     }
 
     setProcessing(true);
-    setProgress({});
     setResults(null);
     setError('');
 
@@ -64,7 +58,7 @@ function App() {
         },
         body: JSON.stringify({
           data: csvData,
-          algorithm
+          algorithm: 'both'
         })
       });
 
@@ -72,6 +66,7 @@ function App() {
         throw new Error('Server error');
       }
 
+      // Handle streaming response
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
 
@@ -93,14 +88,6 @@ function App() {
               } else if (data.type === 'error') {
                 setError(data.error);
                 setProcessing(false);
-              } else if (data.algorithm) {
-                setProgress(prev => ({
-                  ...prev,
-                  [data.algorithm]: {
-                    progress: data.progress,
-                    status: data.status
-                  }
-                }));
               }
             } catch (e) {
               console.error('Error parsing progress data:', e);
@@ -114,133 +101,72 @@ function App() {
     }
   };
 
-  const resetApp = () => {
-    setCsvData(null);
-    setFileName('');
-    setProcessing(false);
-    setProgress({});
-    setResults(null);
-    setError('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
   return (
     <div className="app">
       <header className="app-header">
-        <div className="header-content">
-          <h1>
-            <Activity className="header-icon" />
-            Duplicate Detection System
-          </h1>
-          <p>Advanced duplicate detection using MinHash and Levenshtein algorithms</p>
-        </div>
+        <h1>
+          <Activity size={32} />
+          Duplicate Detection System
+        </h1>
+        <p>Advanced duplicate detection using MinHash and Levenshtein algorithms</p>
       </header>
 
       <main className="main-content">
-        <WorkerStatus />
-
         <div className="upload-section">
           <div className="upload-card">
-            <div className="upload-area">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                className="file-input"
-                id="csv-upload"
-              />
-              <label htmlFor="csv-upload" className="upload-label">
-                <Upload className="upload-icon" />
-                <span>Choose CSV File</span>
-              </label>
-              
-              {fileName && (
-                <div className="file-info">
-                  <FileText className="file-icon" />
-                  <span>{fileName}</span>
-                  <span className="file-count">
-                    ({csvData ? csvData.length : 0} records)
-                  </span>
-                </div>
-              )}
-            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleFileUpload}
+              className="file-input"
+              id="csv-upload"
+            />
+            <label htmlFor="csv-upload" className="upload-label">
+              <Upload size={24} />
+              Choose CSV File
+            </label>
+            
+            {fileName && (
+              <div className="file-info">
+                <FileText size={20} />
+                <span>{fileName}</span>
+                <span className="file-count">
+                  ({csvData ? csvData.length : 0} records)
+                </span>
+              </div>
+            )}
 
             {csvData && !processing && (
-              <div className="controls">
-                <button 
-                  onClick={() => processData('both')} 
-                  className="btn btn-primary"
-                >
-                  <Play className="btn-icon" />
-                  Run Both Algorithms
-                </button>
-                <button 
-                  onClick={() => processData('minhash')} 
-                  className="btn btn-secondary"
-                >
-                  MinHash Only
-                </button>
-                <button 
-                  onClick={() => processData('levenshtein')} 
-                  className="btn btn-secondary"
-                >
-                  Levenshtein Only
-                </button>
-                <button 
-                  onClick={resetApp} 
-                  className="btn btn-outline"
-                >
-                  Reset
-                </button>
-              </div>
+              <button onClick={processData} className="btn btn-primary">
+                <Play size={16} />
+                Process Data
+              </button>
             )}
           </div>
         </div>
 
         {error && (
           <div className="error-message">
-            <AlertCircle className="error-icon" />
+            <AlertCircle size={20} />
             <span>{error}</span>
           </div>
         )}
 
         {processing && (
           <div className="progress-section">
-            <h3>Processing Progress</h3>
-            {progress.minhash && (
-              <ProgressBar
-                algorithm="MinHash"
-                progress={progress.minhash.progress}
-                status={progress.minhash.status}
-              />
-            )}
-            {progress.levenshtein && (
-              <ProgressBar
-                algorithm="Levenshtein"
-                progress={progress.levenshtein.progress}
-                status={progress.levenshtein.status}
-              />
-            )}
+            <p>Processing data...</p>
           </div>
         )}
 
-        {results && !processing && (
+        {results && (
           <div className="results-section">
-            <div className="results-header">
-              <CheckCircle className="success-icon" />
-              <h3>Processing Complete</h3>
-            </div>
-            <ResultsDisplay results={results} />
+            <CheckCircle size={24} />
+            <h3>Processing Complete</h3>
+            <pre>{JSON.stringify(results, null, 2)}</pre>
           </div>
         )}
       </main>
-
-      <footer className="app-footer">
-        <p>Powered by Node.js worker threads and React</p>
-      </footer>
     </div>
   );
 }
